@@ -374,6 +374,34 @@ class Wipe():
             r = requests.delete(url, headers=self.headers, verify=False)
             i += 1			
 
+    def delete_services(self, ids_to_remove):
+        """
+        Deleting service one at the time. Very slow!
+        :return:
+        """
+        if len(ids_to_remove) > 0:
+            all_ids = ids_to_remove
+        else:
+            all_ids = []
+            offset = 0
+            print ('\n[!] Deleting services')
+            while 1:
+                url = '/api/2.0/services/?offset=%s' % offset
+                ids, offset, limit, total_count = self.get(url, 'id', 'services')
+                all_ids.extend(ids)
+                offset += limit
+                if offset >= total_count:
+                    break
+
+        total = len(all_ids)
+        i = 1
+        for obj_id in all_ids:
+            print ('\t[-] Service ID: %s [%d of %d]' % (obj_id, i, total))
+            f = '/api/2.0/services/%s/' % obj_id
+            url = D42_URL + f
+            r = requests.delete(url, headers=self.headers, verify=False)
+            i += 1
+
 
 def print_warning(section, file=None):
     if file:
@@ -415,6 +443,7 @@ def main():
     parser.add_argument('-a', '--all', action="store_true", help='Delete EVERYTHING')
     parser.add_argument('-f', '--file', nargs='?', help='Get IDS from supplied file')
     parser.add_argument('-e', '--serviceinstances', action="store_true", help='Delete Service Instances')	
+    parser.add_argument('-c', '--services', action="store_true", help='Delete Services')
     args = parser.parse_args()
 
     ids_to_remove = []
@@ -506,6 +535,12 @@ def main():
                 w.delete_serviceinstances(ids_to_remove)
             else:
                 cancel()				
+        if args.services:
+            if print_warning("services", args.file):
+                print ('\n Deleting services')
+                w.delete_services(ids_to_remove)
+            else:
+                cancel()
         if args.all:
             if print_warning("EVERYTHING"):
                 print ('\n DELETING EVERYTHING ...')
@@ -519,6 +554,7 @@ def main():
                 w.delete_macs(ids_to_remove)
                 w.delete_vlans(ids_to_remove)
                 w.delete_parts(ids_to_remove)
+                w.delete_services(ids_to_remove)
             else:
                 cancel()
 
